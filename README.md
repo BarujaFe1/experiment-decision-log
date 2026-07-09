@@ -7,6 +7,7 @@
   <p><strong>Turn experiments into traceable decisions: hypothesis → evidence → decision → learning.</strong></p>
 
   <p>
+    <a href="https://experiment-decision-log.vercel.app"><strong>Live Demo</strong></a> •
     <a href="#1-visão-geral--overview">PT-BR / English Overview</a> •
     <a href="#-product-preview">Preview</a> •
     <a href="#-screenshots">Screenshots</a> •
@@ -17,6 +18,7 @@
   </p>
 
   <p>
+    <a href="https://experiment-decision-log.vercel.app"><img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" /></a>
     <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs" />
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-React-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
     <img alt="Zod" src="https://img.shields.io/badge/Zod-Schema-3E63DD?style=for-the-badge" />
@@ -305,7 +307,12 @@ Timeline + Markdown report
 
 ## 🚀 Quick Start / Início Rápido
 
-### Pré-requisitos
+### Live Demo
+**Produção:** [https://experiment-decision-log.vercel.app](https://experiment-decision-log.vercel.app)
+
+Na primeira visita, os **4 experimentos demo** são carregados automaticamente no `localStorage`. Use **Carregar dados demo** para resetar.
+
+### Pré-requisitos (local)
 - **Node.js** v20 ou superior
 - **npm**
 - **Git**
