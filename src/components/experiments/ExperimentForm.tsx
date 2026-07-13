@@ -10,7 +10,7 @@ import {
   emptyExperiment,
   nowIso,
 } from "@/lib/experiment-model";
-import { useExperiments } from "@/lib/experiments-context";
+import { useExperiments, RiskLevel } from "@/lib/experiments-context";
 import { GuardrailStatus } from "@/lib/decision-rules";
 
 type Props = {
@@ -34,6 +34,7 @@ export function ExperimentForm({ initial, mode }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [guardrailStatus, setGuardrailStatus] =
     useState<GuardrailStatus>("unknown");
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>("medium");
 
   const [form, setForm] = useState<Experiment>(() => {
     if (initial) return structuredClone(initial);
@@ -114,8 +115,18 @@ export function ExperimentForm({ initial, mode }: Props) {
           : form.status,
     };
 
-    if (mode === "create") {
+    // emptyExperiment() already records a "created" timeline event — avoid duplicating it.
+    if (mode === "create" && !next.timeline.some((e) => e.type === "created")) {
       next = appendEvent(next, "created", "Experimento criado.");
+    }
+
+    // Status "decided" requires a decision object; keep prior decision or fall back.
+    if (next.status === "decided" && !next.decision) {
+      if (form.decision) {
+        next = { ...next, decision: form.decision };
+      } else {
+        next = { ...next, status: next.analysis ? "analyzed" : "running" };
+      }
     }
 
     const hasData = form.variants.some((v) => v.visitors > 0);
@@ -123,11 +134,16 @@ export function ExperimentForm({ initial, mode }: Props) {
       next = appendEvent(next, "data_added", "Resultados agregados atualizados.");
     }
 
-    save(next);
+    try {
+      save(next);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao salvar.");
+      return;
+    }
 
     if (andAnalyze) {
       try {
-        next = analyze(next, guardrailStatus);
+        next = analyze(next, guardrailStatus, riskLevel);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Falha ao analisar.");
         return;
@@ -140,7 +156,11 @@ export function ExperimentForm({ initial, mode }: Props) {
   return (
     <div className="space-y-8">
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div
+          className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+          aria-live="assertive"
+        >
           {error}
         </div>
       )}
@@ -341,6 +361,17 @@ export function ExperimentForm({ initial, mode }: Props) {
             <option value="unknown">Desconhecido / não avaliado</option>
             <option value="ok">OK (sem prejuízo)</option>
             <option value="harmed">Prejudicado</option>
+          </select>
+        </Field>
+        <Field label="Nível de risco do ship (qualitativo)">
+          <select
+            className="input max-w-md"
+            value={riskLevel}
+            onChange={(e) => setRiskLevel(e.target.value as RiskLevel)}
+          >
+            <option value="low">Baixo</option>
+            <option value="medium">Médio</option>
+            <option value="high">Alto (mesmo com evidência forte → iterar)</option>
           </select>
         </Field>
       </Section>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { DecisionPanel } from "@/components/decisions/DecisionPanel";
 import { MarkdownExportButton } from "@/components/decisions/MarkdownExportButton";
 import { Timeline } from "@/components/decisions/Timeline";
@@ -11,19 +12,55 @@ import {
   StatusBadge,
 } from "@/components/experiments/EvidenceBadge";
 import { AnalysisSummary } from "@/components/metrics/AnalysisSummary";
-import { useExperiments } from "@/lib/experiments-context";
+import { RiskLevel, useExperiments } from "@/lib/experiments-context";
+import { GuardrailStatus } from "@/lib/decision-rules";
 import {
   getGuardrailMetrics,
   getPrimaryMetric,
 } from "@/lib/experiment-model";
 import { formatPercent } from "@/lib/statistics";
 
+function inferGuardrailFromCaveats(
+  caveats: string[] | undefined,
+): GuardrailStatus {
+  if (!caveats?.length) return "unknown";
+  if (caveats.some((c) => c.toLowerCase().includes("guardrail prejudicado"))) {
+    return "harmed";
+  }
+  if (
+    caveats.some((c) => c.toLowerCase().includes("guardrails não informado"))
+  ) {
+    return "unknown";
+  }
+  return "ok";
+}
+
 export default function ExperimentDetailPage() {
   const params = useParams<{ id: string }>();
   const { experiments, ready, analyze } = useExperiments();
   const experiment = experiments.find((e) => e.id === params.id);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionOk, setActionOk] = useState<string | null>(null);
+  const [guardrailStatus, setGuardrailStatus] =
+    useState<GuardrailStatus>("unknown");
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>("medium");
 
-  if (!ready) return <p className="text-[var(--muted)]">Carregando…</p>;
+  useEffect(() => {
+    if (!experiment) return;
+    setGuardrailStatus(inferGuardrailFromCaveats(experiment.analysis?.caveats));
+    setActionError(null);
+    setActionOk(null);
+    // Only reset controls when navigating between experiments.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional id-only sync
+  }, [experiment?.id]);
+
+  if (!ready) {
+    return (
+      <p className="text-[var(--muted)]" aria-busy="true">
+        Carregando…
+      </p>
+    );
+  }
 
   if (!experiment) {
     return (
@@ -43,6 +80,18 @@ export default function ExperimentDetailPage() {
   const control = experiment.variants.find((v) => v.name === "control");
   const variant = experiment.variants.find((v) => v.name === "variant_a");
   const pendingDecision = !experiment.decision;
+  const current = experiment;
+
+  function handleAnalyze() {
+    setActionError(null);
+    setActionOk(null);
+    try {
+      analyze(current, guardrailStatus, riskLevel);
+      setActionOk("Análise recalculada com o guardrail e risco selecionados.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Falha ao recalcular.");
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -76,16 +125,23 @@ export default function ExperimentDetailPage() {
           >
             Editar
           </Link>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => analyze(experiment, "unknown")}
-          >
-            Recalcular análise
-          </button>
           <MarkdownExportButton experiment={experiment} />
         </div>
       </div>
+
+      {(actionError || actionOk) && (
+        <div
+          className={
+            actionError
+              ? "rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+              : "rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+          }
+          role={actionError ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {actionError || actionOk}
+        </div>
+      )}
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5">
         <h2 className="font-[family-name:var(--font-display)] text-xl">
@@ -182,9 +238,46 @@ export default function ExperimentDetailPage() {
       </div>
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5">
-        <h2 className="mb-4 font-[family-name:var(--font-display)] text-xl">
-          Análise e recomendação
-        </h2>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-[family-name:var(--font-display)] text-xl">
+            Análise e recomendação
+          </h2>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-xs text-[var(--muted)]">
+              Guardrail
+              <select
+                className="input mt-1 min-w-40"
+                value={guardrailStatus}
+                onChange={(e) =>
+                  setGuardrailStatus(e.target.value as GuardrailStatus)
+                }
+              >
+                <option value="unknown">Não avaliado</option>
+                <option value="ok">OK</option>
+                <option value="harmed">Prejudicado</option>
+              </select>
+            </label>
+            <label className="text-xs text-[var(--muted)]">
+              Risco
+              <select
+                className="input mt-1 min-w-36"
+                value={riskLevel}
+                onChange={(e) => setRiskLevel(e.target.value as RiskLevel)}
+              >
+                <option value="low">Baixo</option>
+                <option value="medium">Médio</option>
+                <option value="high">Alto</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleAnalyze}
+            >
+              Recalcular análise
+            </button>
+          </div>
+        </div>
         <AnalysisSummary analysis={experiment.analysis} />
       </section>
 

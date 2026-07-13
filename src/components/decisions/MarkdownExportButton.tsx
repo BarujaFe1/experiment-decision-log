@@ -11,8 +11,10 @@ export function MarkdownExportButton({ experiment }: { experiment: Experiment })
   function handleExport() {
     const md = exportExperimentMarkdown(experiment);
     const slug = experiment.title
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 48);
     downloadMarkdown(`${slug || experiment.id}-decision-report.md`, md);

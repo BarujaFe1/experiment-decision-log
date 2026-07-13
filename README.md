@@ -336,6 +336,7 @@ Na primeira visita, os 4 experimentos demo são carregados automaticamente. Use 
 
 ```bash
 npm test          # Vitest — regras estatísticas e de decisão
+npm run typecheck # TypeScript estrito (tsc --noEmit)
 npm run lint      # ESLint
 npm run build     # Build de produção Next.js
 npm run dev       # Servidor de desenvolvimento
@@ -347,11 +348,39 @@ Cobertura principal dos testes:
 3. uplift relativo  
 4. divisão por zero (controle = 0)  
 5. amostra insuficiente  
-6. evidência forte  
-7. evidência inconclusiva  
+6. evidência forte / inconclusiva  
+7. taxas extremas (0% vs 100%) sem IC falso  
 8. recomendação com guardrail prejudicado  
-9. exportação Markdown  
-10. consistência dos dados demo  
+9. matriz ship / iterate / high-risk / lift negativo  
+10. exportação Markdown + consistência dos demos  
+
+CI: `.github/workflows/ci.yml` (lint → typecheck → test → build).
+
+---
+
+## 🔐 Variáveis de ambiente
+
+O MVP **não exige secrets**. Use `.env.example` como referência.
+
+```bash
+cp .env.example .env.local   # opcional
+```
+
+Persistência é 100% `localStorage` no browser.
+
+---
+
+## 🧭 Decisões técnicas e trade-offs
+
+| Decisão | Trade-off |
+| --- | --- |
+| Frontend-only + localStorage | Demo instantânea; sem sync multi-device |
+| Z-test / IC aproximados | Transparentes e testáveis; não cobrem peeking/múltiplos testes |
+| Guardrail qualitativo | Honestidade de escopo; AOV contínuo fica no roadmap |
+| Sugestão ≠ decisão | Força rationale humano; usuário pode discordar (intencional) |
+| Sem auth | Portfólio simples; não é ferramenta multi-usuário |
+
+Detalhes: [`docs/TECHNICAL_DECISIONS.md`](docs/TECHNICAL_DECISIONS.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ---
 
@@ -408,17 +437,37 @@ O projeto demonstra competências para **Product Analytics, Growth Analytics, An
 - UX clara para stakeholders não técnicos
 - documentação e storytelling de portfólio
 
-Guia de apresentação: [`HANDOFF_PORTFOLIO.md`](HANDOFF_PORTFOLIO.md)
+### O que este projeto demonstra
+
+- Separar **evidência estatística** de **decisão de produto**
+- Projetar demos que contam trade-offs reais (ex.: conversão sobe / AOV cai)
+- Escrever domínio puro testável (`statistics` / `decision-rules`) fora da UI
+- Comunicar limitações sem enfraquecer o produto
+
+### Como eu apresentaria em entrevista
+
+1. Abrir a live demo e contrastar checkout (ship) vs promoção (do_not_ship).
+2. Mostrar caveats e dizer o que o p-value **não** autoriza.
+3. Registrar uma decisão com rationale/follow-up e exportar Markdown.
+4. Abrir um teste Vitest da matriz de recomendação.
+5. Citar trade-offs: localStorage, aproximações, guardrails qualitativos.
+
+Guia completo: [`HANDOFF_PORTFOLIO.md`](HANDOFF_PORTFOLIO.md)
 
 ---
 
 ## 📚 Documentação Complementar
 
-- [`docs/statistical-notes.md`](docs/statistical-notes.md) — cálculos, IC, limitações
-- [`docs/decision-framework.md`](docs/decision-framework.md) — evidência, guardrails, risco, custo
-- [`docs/experiment-methodology.md`](docs/experiment-methodology.md) — princípios do ciclo
-- [`docs/demo-story.md`](docs/demo-story.md) — narrativa dos 4 demos
-- [`HANDOFF_PORTFOLIO.md`](HANDOFF_PORTFOLIO.md) — pitch, LinkedIn e roteiro de entrevista
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/TECHNICAL_DECISIONS.md`](docs/TECHNICAL_DECISIONS.md)
+- [`docs/TESTING.md`](docs/TESTING.md)
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md)
+- [`docs/HANDOFF.md`](docs/HANDOFF.md)
+- [`docs/statistical-notes.md`](docs/statistical-notes.md)
+- [`docs/decision-framework.md`](docs/decision-framework.md)
+- [`docs/demo-story.md`](docs/demo-story.md)
+- [`HANDOFF_PORTFOLIO.md`](HANDOFF_PORTFOLIO.md)
 
 ---
 

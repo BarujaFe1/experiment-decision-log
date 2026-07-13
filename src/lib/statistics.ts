@@ -153,6 +153,14 @@ export function analyzeConversion(input: ConversionInput): ConversionStats {
     confidence_interval_low = 0;
     confidence_interval_high = 0;
     ci_crosses_zero = true;
+  } else {
+    // Extreme rates (0% vs 100%): SE is 0 but the difference is not compatible with zero.
+    confidence_interval_low = absolute_difference;
+    confidence_interval_high = absolute_difference;
+    ci_crosses_zero = false;
+    caveats.push(
+      "Variância da diferença nula (taxas extremas 0%/100%): IC degenera no ponto estimado; interprete com cautela.",
+    );
   }
 
   if (ci_crosses_zero) {
