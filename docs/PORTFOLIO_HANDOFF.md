@@ -16,7 +16,7 @@
 | Promo story only as a list card | Full synthetic case at `/cases/promo-aov` |
 | StatLab pairing only a portfolio bullet | Explicit `docs/STATLAB_PAIRING.md` (no feature duplication) |
 | 19 domain tests | + storage regression tests |
-| Screenshots mostly generative mocks | Capture checklist + honest note; replace with live shots |
+| Screenshots mostly generative mocks | Live production captures in `assets/screenshots/` (01–07) |
 
 ## What this project is
 
@@ -57,10 +57,9 @@ npm run dev
 
 ## Next steps
 
-1. Confirm production alias serves post-merge commit  
-2. Replace screenshot mocks with live captures (`docs/SCREENSHOTS.md`)  
-3. Keep StatLab/EDL as complementary cards, not merged products  
-4. Optional later: CSV import / SQLite — only if it strengthens the story without fake “platform” claims  
+1. Keep StatLab/EDL as complementary cards, not merged products  
+2. Optional later: CSV import / SQLite — only if it strengthens the story without fake “platform” claims  
+3. Optional: E2E Playwright for tour → promo case → export path  
 
 ## Claims allowed
 

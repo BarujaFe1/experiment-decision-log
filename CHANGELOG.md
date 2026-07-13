@@ -21,6 +21,8 @@
 - Home CTA prioritizes guided demo
 - Nav includes Tour
 - README strengthened with honest claims and interview script
+- Replaced screenshot mocks with live production captures (`assets/screenshots/01`–`07`)
 
 ### Status
 - Portfolio role recommendation: **selecionado** (featured companion to StatLab; not the single “hero” product)
+- Production alias serves elevation routes (`/tour`, `/cases/promo-aov`)

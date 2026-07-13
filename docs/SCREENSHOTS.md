@@ -24,5 +24,11 @@ Do not include personal names beyond the synthetic demo owners already in seed d
 
 ## Current note
 
-Existing PNGs under `assets/screenshots/` may be illustrative mocks from an earlier pass.
-Treat them as placeholders until replaced by production captures listed above.
+Live captures from production (2026-07-13) replaced all seven PNGs:
+- `01-home-hero.png`
+- `02-experiments-list.png`
+- `03-analysis-detail.png`
+- `04-decision-panel.png`
+- `05-methodology.png`
+- `06-tour.png`
+- `07-promo-case.png`
