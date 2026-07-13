@@ -55,4 +55,4 @@ MVP frontend-first sólido: ciclo hipótese → evidência → decisão → apre
 - [x] README fortalecido
 - [x] `.env.example` + `.gitignore` ok
 - [x] HANDOFF.md
-- [ ] Push na branch (ao final)
+- [x] Push na branch
