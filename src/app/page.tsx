@@ -29,8 +29,8 @@ export default function HomePage() {
             <Link href="/experiments" className="btn-primary">
               Ver experimentos <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href="/experiments/new" className="btn-secondary">
-              Criar experimento
+            <Link href="/tour" className="btn-secondary">
+              Demo guiada (4 min)
             </Link>
             <Link href="/methodology" className="btn-ghost">
               Metodologia

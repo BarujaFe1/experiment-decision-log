@@ -7,6 +7,7 @@ import { useExperiments } from "@/lib/experiments-context";
 const links = [
   { href: "/", label: "Home" },
   { href: "/experiments", label: "Experimentos" },
+  { href: "/tour", label: "Tour" },
   { href: "/experiments/new", label: "Novo" },
   { href: "/methodology", label: "Metodologia" },
 ];

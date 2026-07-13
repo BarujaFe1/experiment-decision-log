@@ -310,7 +310,11 @@ Timeline + Markdown report
 ### Live Demo
 **Produção:** [https://experiment-decision-log.vercel.app](https://experiment-decision-log.vercel.app)
 
+- **Demo guiada (≈4 min):** [/tour](https://experiment-decision-log.vercel.app/tour)
+- **Case sintético completo:** [/cases/promo-aov](https://experiment-decision-log.vercel.app/cases/promo-aov)
+
 Na primeira visita, os **4 experimentos demo** são carregados automaticamente no `localStorage`. Use **Carregar dados demo** para resetar.
+
 
 ### Pré-requisitos (local)
 - **Node.js** v20 ou superior
@@ -428,6 +432,17 @@ Detalhes: [`docs/statistical-notes.md`](docs/statistical-notes.md) · [`docs/dec
 
 ---
 
+## 🧭 Status atual
+
+- **Papel no portfólio:** selecionado (par do StatLab; não precisa ser o único “hero”)
+- **Deploy:** Vercel production em `main`
+- **Escopo:** lab/MVP frontend-first — localStorage, estatística aproximada, guardrails qualitativos
+- **Não é:** plataforma de experimentação, feature flagger, nem motor de ship automático
+
+Par com StatLab (cálculo ≠ decisão): [`docs/STATLAB_PAIRING.md`](docs/STATLAB_PAIRING.md)
+
+---
+
 ## 💼 Valor para Portfólio / Portfolio Value
 
 O projeto demonstra competências para **Product Analytics, Growth Analytics, Analytics Engineering e Product Management técnico**:
@@ -458,6 +473,9 @@ Guia completo: [`HANDOFF_PORTFOLIO.md`](HANDOFF_PORTFOLIO.md)
 
 ## 📚 Documentação Complementar
 
+- [`docs/PORTFOLIO_HANDOFF.md`](docs/PORTFOLIO_HANDOFF.md)
+- [`docs/STATLAB_PAIRING.md`](docs/STATLAB_PAIRING.md)
+- [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/TECHNICAL_DECISIONS.md`](docs/TECHNICAL_DECISIONS.md)
 - [`docs/TESTING.md`](docs/TESTING.md)
