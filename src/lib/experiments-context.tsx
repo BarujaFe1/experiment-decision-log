@@ -18,16 +18,25 @@ import {
 } from "./experiment-model";
 import { buildAnalysisResult, GuardrailStatus } from "./decision-rules";
 import {
+  StorageError,
   clearExperiments,
+  clearExplicitlyClearedFlag,
   deleteExperiment as removeFromStorage,
   loadExperiments,
+  loadExperimentsDetailed,
+  markExplicitlyCleared,
   replaceAllExperiments,
   upsertExperiment,
+  wasExplicitlyCleared,
 } from "./storage";
+
+export type RiskLevel = "low" | "medium" | "high";
 
 type ExperimentsContextValue = {
   experiments: Experiment[];
   ready: boolean;
+  storageWarning: string | null;
+  dismissStorageWarning: () => void;
   refresh: () => void;
   save: (experiment: Experiment) => void;
   remove: (id: string) => void;
@@ -36,8 +45,12 @@ type ExperimentsContextValue = {
   analyze: (
     experiment: Experiment,
     guardrailStatus?: GuardrailStatus,
+    riskLevel?: RiskLevel,
   ) => Experiment;
-  recordDecision: (experiment: Experiment, decision: Omit<Decision, "id" | "experiment_id">) => Experiment;
+  recordDecision: (
+    experiment: Experiment,
+    decision: Omit<Decision, "id" | "experiment_id">,
+  ) => Experiment;
   appendEvent: (
     experiment: Experiment,
     type: DecisionEvent["type"],
@@ -50,27 +63,77 @@ const ExperimentsContext = createContext<ExperimentsContextValue | null>(null);
 export function ExperimentsProvider({ children }: { children: React.ReactNode }) {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [ready, setReady] = useState(false);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+
+  const dismissStorageWarning = useCallback(() => {
+    setStorageWarning(null);
+  }, []);
 
   const refresh = useCallback(() => {
     setExperiments(loadExperiments());
   }, []);
 
   useEffect(() => {
-    const existing = loadExperiments();
-    if (existing.length === 0) {
-      const demos = createDemoExperiments();
-      replaceAllExperiments(demos);
-      setExperiments(demos);
-    } else {
-      setExperiments(existing);
+    try {
+      const { experiments: existing, dropped } = loadExperimentsDetailed();
+      if (dropped > 0) {
+        setStorageWarning(
+          `${dropped} registro(s) inválido(s) foram ignorados no localStorage (schema incompatível).`,
+        );
+      }
+      if (existing.length === 0) {
+        if (wasExplicitlyCleared()) {
+          setExperiments([]);
+        } else {
+          const demos = createDemoExperiments();
+          try {
+            replaceAllExperiments(demos);
+          } catch (e) {
+            setStorageWarning(
+              e instanceof Error
+                ? e.message
+                : "Demos carregados só em memória (persistência indisponível).",
+            );
+          }
+          setExperiments(demos);
+        }
+      } else {
+        setExperiments(existing);
+      }
+    } catch (e) {
+      if (wasExplicitlyCleared()) {
+        setExperiments([]);
+      } else {
+        setExperiments(createDemoExperiments());
+      }
+      setStorageWarning(
+        e instanceof Error ? e.message : "Falha ao inicializar armazenamento.",
+      );
     }
     setReady(true);
   }, []);
 
   const save = useCallback((experiment: Experiment) => {
     const next = { ...experiment, updated_at: nowIso() };
-    upsertExperiment(next);
-    setExperiments(loadExperiments());
+    try {
+      upsertExperiment(next);
+      clearExplicitlyClearedFlag();
+      setExperiments(loadExperiments());
+      setStorageWarning(null);
+    } catch (e) {
+      setExperiments((prev) => {
+        const idx = prev.findIndex((x) => x.id === next.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = next;
+          return copy;
+        }
+        return [next, ...prev];
+      });
+      throw e instanceof StorageError
+        ? e
+        : new StorageError("Falha ao salvar experimento.");
+    }
   }, []);
 
   const remove = useCallback((id: string) => {
@@ -81,12 +144,16 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
   const loadDemo = useCallback(() => {
     const demos = createDemoExperiments();
     replaceAllExperiments(demos);
+    clearExplicitlyClearedFlag();
     setExperiments(demos);
+    setStorageWarning(null);
   }, []);
 
   const clearAll = useCallback(() => {
     clearExperiments();
+    markExplicitlyCleared();
     setExperiments([]);
+    setStorageWarning(null);
   }, []);
 
   const appendEvent = useCallback(
@@ -112,7 +179,11 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
   );
 
   const analyze = useCallback(
-    (experiment: Experiment, guardrailStatus: GuardrailStatus = "unknown") => {
+    (
+      experiment: Experiment,
+      guardrailStatus: GuardrailStatus = "unknown",
+      riskLevel?: RiskLevel,
+    ) => {
       const control = experiment.variants.find((v) => v.name === "control");
       const variant = experiment.variants.find((v) => v.name === "variant_a");
       if (!control || !variant) {
@@ -125,6 +196,7 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
         variantVisitors: variant.visitors,
         variantConversions: variant.conversions,
         guardrailStatus,
+        riskLevel,
       });
       let next: Experiment = {
         ...experiment,
@@ -136,8 +208,26 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
         updated_at: nowIso(),
       };
       next = appendEvent(next, "analyzed", "Análise estatística recalculada.");
-      upsertExperiment(next);
-      setExperiments(loadExperiments());
+      try {
+        upsertExperiment(next);
+        clearExplicitlyClearedFlag();
+        setExperiments(loadExperiments());
+      } catch (e) {
+        setExperiments((prev) => {
+          const idx = prev.findIndex((x) => x.id === next.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = next;
+            return copy;
+          }
+          return [next, ...prev];
+        });
+        setStorageWarning(
+          e instanceof Error
+            ? e.message
+            : "Análise calculada em memória, mas não foi persistida.",
+        );
+      }
       return next;
     },
     [appendEvent],
@@ -171,8 +261,24 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
           `Follow-up: ${decision.follow_up_metric || "métrica a definir"} (${decision.follow_up_date || "sem data"}).`,
         );
       }
-      upsertExperiment(next);
-      setExperiments(loadExperiments());
+      try {
+        upsertExperiment(next);
+        clearExplicitlyClearedFlag();
+        setExperiments(loadExperiments());
+      } catch (e) {
+        setExperiments((prev) => {
+          const idx = prev.findIndex((x) => x.id === next.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = next;
+            return copy;
+          }
+          return [next, ...prev];
+        });
+        throw e instanceof StorageError
+          ? e
+          : new StorageError("Decisão registrada em memória, mas não persistida.");
+      }
       return next;
     },
     [appendEvent],
@@ -182,6 +288,8 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
     () => ({
       experiments,
       ready,
+      storageWarning,
+      dismissStorageWarning,
       refresh,
       save,
       remove,
@@ -194,6 +302,8 @@ export function ExperimentsProvider({ children }: { children: React.ReactNode })
     [
       experiments,
       ready,
+      storageWarning,
+      dismissStorageWarning,
       refresh,
       save,
       remove,

@@ -49,6 +49,42 @@ describe("absolute difference and uplift", () => {
   });
 });
 
+describe("validation and edge cases", () => {
+  it("throws when conversions exceed visitors", () => {
+    expect(() =>
+      analyzeConversion({
+        controlVisitors: 10,
+        controlConversions: 11,
+        variantVisitors: 10,
+        variantConversions: 1,
+      }),
+    ).toThrow(/exceder/i);
+  });
+
+  it("handles zero visitors groups safely", () => {
+    const stats = analyzeConversion({
+      controlVisitors: 0,
+      controlConversions: 0,
+      variantVisitors: 100,
+      variantConversions: 10,
+    });
+    expect(stats.low_reliability).toBe(true);
+    expect(stats.z_score).toBeNull();
+  });
+
+  it("does not claim CI crosses zero for extreme 0% vs 100%", () => {
+    const stats = analyzeConversion({
+      controlVisitors: 200,
+      controlConversions: 0,
+      variantVisitors: 200,
+      variantConversions: 200,
+    });
+    expect(stats.ci_crosses_zero).toBe(false);
+    expect(stats.confidence_interval_low).toBeCloseTo(1);
+    expect(stats.confidence_interval_high).toBeCloseTo(1);
+  });
+});
+
 describe("sample size and evidence", () => {
   it("flags insufficient sample", () => {
     const stats = analyzeConversion({
@@ -87,7 +123,7 @@ describe("sample size and evidence", () => {
   });
 });
 
-describe("decision rules with guardrails", () => {
+describe("decision rules matrix", () => {
   it("recommends do_not_ship when guardrail is harmed", () => {
     const analysis = buildAnalysisResult({
       experimentId: "t1",
@@ -98,14 +134,63 @@ describe("decision rules with guardrails", () => {
       guardrailStatus: "harmed",
     });
     expect(analysis.recommendation).toBe("do_not_ship");
+  });
+
+  it("recommends ship for strong positive with ok guardrail", () => {
     expect(
       suggestRecommendation({
         evidence: "strong",
-        absoluteDifference: 0.03,
+        absoluteDifference: 0.02,
         sampleSizeOk: true,
-        guardrailStatus: "harmed",
+        guardrailStatus: "ok",
+        riskLevel: "low",
+      }),
+    ).toBe("ship");
+  });
+
+  it("recommends iterate when strong positive but risk is high", () => {
+    expect(
+      suggestRecommendation({
+        evidence: "strong",
+        absoluteDifference: 0.02,
+        sampleSizeOk: true,
+        guardrailStatus: "ok",
+        riskLevel: "high",
+      }),
+    ).toBe("iterate");
+  });
+
+  it("recommends iterate for weak/moderate positive signal", () => {
+    expect(
+      suggestRecommendation({
+        evidence: "weak",
+        absoluteDifference: 0.01,
+        sampleSizeOk: true,
+        guardrailStatus: "ok",
+      }),
+    ).toBe("iterate");
+  });
+
+  it("recommends do_not_ship for strong negative lift", () => {
+    expect(
+      suggestRecommendation({
+        evidence: "strong",
+        absoluteDifference: -0.02,
+        sampleSizeOk: true,
+        guardrailStatus: "ok",
       }),
     ).toBe("do_not_ship");
+  });
+
+  it("recommends collect_more_data when sample is insufficient", () => {
+    expect(
+      suggestRecommendation({
+        evidence: "inconclusive",
+        absoluteDifference: 0.05,
+        sampleSizeOk: false,
+        guardrailStatus: "unknown",
+      }),
+    ).toBe("collect_more_data");
   });
 });
 

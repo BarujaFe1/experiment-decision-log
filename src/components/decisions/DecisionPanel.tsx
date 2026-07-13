@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Decision, Experiment, Recommendation } from "@/lib/experiment-model";
 import { useExperiments } from "@/lib/experiments-context";
 
@@ -25,8 +25,36 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
     risks: experiment.decision?.risks ?? experiment.risk_notes ?? "",
   });
 
+  useEffect(() => {
+    const nextSuggested =
+      experiment.analysis?.recommendation ?? "collect_more_data";
+    setForm({
+      decision: (experiment.decision?.decision ??
+        nextSuggested) as Recommendation,
+      rationale: experiment.decision?.rationale ?? "",
+      decided_by: experiment.decision?.decided_by ?? experiment.owner ?? "",
+      learning: experiment.decision?.learning ?? "",
+      next_action: experiment.decision?.next_action ?? "",
+      follow_up_date: experiment.decision?.follow_up_date ?? "",
+      follow_up_metric: experiment.decision?.follow_up_metric ?? "",
+      guardrail_impact: experiment.decision?.guardrail_impact ?? "",
+      implementation_cost:
+        experiment.decision?.implementation_cost ?? ("medium" as const),
+      confidence: experiment.decision?.confidence ?? ("medium" as const),
+      risks: experiment.decision?.risks ?? experiment.risk_notes ?? "",
+    });
+    setSaved(false);
+    setError(null);
+    // Reset form when navigating between experiments only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional id-only sync
+  }, [experiment.id]);
+
   function submit() {
-    if (!form.rationale.trim() || !form.learning.trim() || !form.next_action.trim()) {
+    if (
+      !form.rationale.trim() ||
+      !form.learning.trim() ||
+      !form.next_action.trim()
+    ) {
       setError("Rationale, aprendizado e próxima ação são obrigatórios.");
       return;
     }
@@ -49,8 +77,12 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
       confidence: form.confidence,
       risks: form.risks,
     };
-    recordDecision(experiment, payload);
-    setSaved(true);
+    try {
+      recordDecision(experiment, payload);
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao registrar decisão.");
+    }
   }
 
   return (
@@ -60,18 +92,26 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
           6. Decisão
         </h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          A decisão não depende só da métrica primária. Registre guardrails, risco,
-          custo, confiança e follow-up.
+          A decisão não depende só da métrica primária. Registre guardrails,
+          risco, custo, confiança e follow-up. A recomendação automática é
+          apenas sugestão.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+        <div
+          className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900"
+          role="alert"
+          aria-live="assertive"
+        >
           {error}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+        <div
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          role="status"
+        >
           Decisão registrada. Timeline atualizada.
         </div>
       )}
@@ -100,7 +140,9 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
           <input
             className="input"
             value={form.decided_by}
-            onChange={(e) => setForm((f) => ({ ...f, decided_by: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, decided_by: e.target.value }))
+            }
           />
         </label>
         <label className="text-sm">
@@ -121,14 +163,19 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-[var(--muted)]">Custo de implementação</span>
+          <span className="mb-1 block text-[var(--muted)]">
+            Custo de implementação
+          </span>
           <select
             className="input"
             value={form.implementation_cost}
             onChange={(e) =>
               setForm((f) => ({
                 ...f,
-                implementation_cost: e.target.value as "low" | "medium" | "high",
+                implementation_cost: e.target.value as
+                  | "low"
+                  | "medium"
+                  | "high",
               }))
             }
           >
@@ -140,7 +187,9 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
       </div>
 
       <label className="block text-sm">
-        <span className="mb-1 block text-[var(--muted)]">Impacto em guardrails</span>
+        <span className="mb-1 block text-[var(--muted)]">
+          Impacto em guardrails
+        </span>
         <textarea
           className="input min-h-16"
           value={form.guardrail_impact}
@@ -196,7 +245,9 @@ export function DecisionPanel({ experiment }: { experiment: Experiment }) {
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-[var(--muted)]">Métrica de follow-up</span>
+          <span className="mb-1 block text-[var(--muted)]">
+            Métrica de follow-up
+          </span>
           <input
             className="input"
             value={form.follow_up_metric}
